@@ -1,0 +1,122 @@
+function OnAbout(event)
+	ctrl = event:GetTextCtrl()
+	ctrl:AppendText("EZ-Trak SX post processor\n")
+	ctrl:AppendText("\n")
+	ctrl:AppendText("No Z axis controls\n")
+	ctrl:AppendText("No spindle\n")
+	ctrl:AppendText("Uses EZ-Trac code, not G-code\n")
+end
+
+function OnInit()
+	shownumber = true
+	post.SetCommentChars(" ()","_[]");
+	post.Text ("EZTRAK|SX 1 MODE|");
+	if(scale == metric) then
+		post.Text ("METRIC") --metric mode
+	 else
+		post.Text ("INCH") --inch mode
+	end
+	post.Text ("  | ",fileNameOnly);
+	post.Text ("\n");
+	bigarcs = 1 --stitch arc segments together
+	minArcSize = 0.05 --arcs smaller than this are converted to moves
+	skipInitialStupidRapid = true
+end
+
+function OnNewLine()
+	if(shownumber) then
+		post.Number (lineNumber, "0000")
+		post.Text (" ")
+		lineNumber = lineNumber + 10
+	end
+end
+
+function OnFinish()
+	post.Text ("|| END|PRGM\n")
+end
+
+function OnRapid()
+	if (skipInitialStupidRapid) then
+		skipInitialStupidRapid = false
+		return
+	end
+	post.Text ("RAPID ABS")
+	post.Text (" X")
+	post.Number(endX * scale, "+0.0000")
+	post.Text (" Y")
+	post.Number(endY * scale, "+0.0000")
+	post.Text (" Z")
+	post.Number(endZ * scale, "+0.0000")
+	post.Text ("\n")
+end
+
+function goxy()
+	post.Text ("LINE ABS")
+	post.Text (" X")
+	post.Number(endX * scale, "+0.0000")
+	post.Text (" Y")
+	post.Number(endY * scale, "+0.0000")
+	post.Text (" Z")
+	post.Number(endZ * scale, "+0.0000")
+	post.Text (" F")
+	post.Number (feedRate * scale,"0.00")
+	post.Text ("\n")
+end
+
+function OnMove()
+	 if(math.hypot(currentX - endX, currentY -endY) * scale < 0.0001) then --ignore plunge or very short move
+		 return
+	 end
+	 goxy()
+end
+
+function OnArc()
+	post.Text ("ARC|CNTRPT ABS")
+	if(arcAngle <0) then
+		post.Text(" CCW")
+	else
+		post.Text(" CW")
+	end
+	post.Text (" X")
+	post.Number(endX * scale, "+0.0000")
+	post.Text (" Y")
+	post.Number(endY * scale, "+0.0000")
+	post.Text (" Z")
+	post.Number(endZ * scale, "+0.0000")
+	post.Text (" XC")
+	post.Number(arcCentreX * scale, "+0.0000")
+	post.Text (" YC")
+	post.Number(arcCentreY * scale, "+0.0000")
+	post.Text (" F")
+	post.Number (feedRate * scale,"0.00")
+	post.Text ("\n")
+end
+
+function OnSpindleCW()
+end
+
+function OnSpindleCCW()
+end
+
+function OnSpindleOff()
+end
+
+function OnNewOperation()
+end
+
+function OnToolChange()
+	post.Text ("|| TOOLCHG T")
+	post.Number (tool, "0")
+	post.Text ("\n")
+end
+
+function OnDrill()
+	post.Text ("DR|PT ABS")
+	post.Text (" X")
+	post.Number(endX * scale, "+0.0000")
+	post.Text (" Y")
+	post.Number(endY * scale, "+0.0000")
+	post.Text (" Z")
+	post.Number(endZ * scale, "+0.0000")
+	post.Text ("\n")
+end
